@@ -8,3 +8,4 @@ emoji
 nltk
 vaderSentiment
 textblob
+fpdf
