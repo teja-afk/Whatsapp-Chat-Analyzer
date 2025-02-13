@@ -1,16 +1,20 @@
-import re
-import streamlit as st
-from fpdf import FPDF
-import io
 import os
-import matplotlib.pyplot as plt
+import re
+import io
+import textwrap
+import nltk
 import pandas as pd
-from urlextract import URLExtract
+import streamlit as st
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud
-from collections import Counter
 import seaborn as sns
 from datetime import datetime
+from fpdf import FPDF
+from collections import Counter
+from urlextract import URLExtract
+from wordcloud import WordCloud
+from textblob import TextBlob
+
+nltk.download('vader_lexicon')
 
 def preprocess(data):
 
@@ -100,47 +104,43 @@ def fetch_stats(selected,df):
     return no_messages,no_words,no_media, no_urls
 
 def chat_contri(df):
-    # Calculate the percentage contribution of each user
-    df_contri = (
-        df['user'].value_counts() / df.shape[0] * 100
-    ).reset_index().rename(columns={'index': 'name', 'user': 'percent'})
+    # Count messages per user
+    user_counts = df['user'].value_counts()
 
-    # Get the top contributors for plotting
-    x = df['user'].value_counts().head()
-    name = x.index
-    count = x.values
+    # Set figure size
+    fig, ax = plt.subplots(figsize=(14, 6))
 
-    # Define the colors for the pie chart
-    colors = ['#00bf7d', '#00b4c5', '#0073e6', '#2546f0', '#5928ed', '#b3c7f7', '#8babf1', '#0073e6', '#0461cf',
-              '#054fb9', '#c44601', '#f57600', '#8babf1', '#0073e6', '#5ba300', '#054fb9', '#89ce00', '#0073e6', '#e6308a', '#b51963']
+    # Plot bar chart
+    user_counts.plot(kind='bar', ax=ax, color='skyblue')
 
-    # Create the pie chart
-    fig1, ax1 = plt.subplots()
-    ax1.pie(count, labels=name, colors=colors, autopct='%1.1f%%', shadow=True, startangle=90)
-    ax1.axis('equal')  # Equal aspect ratio ensures the pie chart is a circle.
+    # Set labels and title
+    ax.set_xlabel("User")
+    ax.set_ylabel("Message Count")
+    ax.set_title("Chat Contribution")
 
-    return fig1, df_contri
+    # Rotate x-axis labels and wrap long names
+    wrapped_labels = [textwrap.fill(name, width=10) for name in user_counts.index]
+    ax.set_xticklabels(wrapped_labels, rotation=30, ha="right", fontsize=9)
+
+    plt.xticks(rotation=30, ha='right')  # Ensures labels are properly aligned
+    plt.tight_layout()  # Adjust layout to fit labels properly
+
+    return fig
 
 def most_common_words(selected,df):
-
     f = open('stop_hinglish.txt','r')
     stopwords = f.read()
     f.close()
-
     if selected != 'Overall':
         df = df[df['user'] == selected]
-
     temp = df[df['user'] != 'group_notification']
     temp = temp[temp['messages'] != '<Media omitted>\n']
-
     word_list = []
     for mes in temp['messages']:
         for word in mes.lower().split():
             if word not in stopwords:
                 word_list.append(word)
-
     most_common_df = pd.DataFrame(Counter(word_list).most_common(20))
-
     fig3,axis = plt.subplots()
     axis.barh(most_common_df[0],most_common_df[1])
     plt.xticks(rotation= 'vertical')
@@ -151,29 +151,23 @@ def emoji(selected,df):
     import emoji
     if selected != 'Overall':
         df = df[df['user'] == selected]
-
     emojis = []
     for m in df['messages']:
         for c in m:
             if c in emoji.EMOJI_DATA:
                 emojis.append(c)
-
     emoji_df = pd.DataFrame(Counter(emojis).most_common(len(Counter(emojis))))
-
     return emoji_df
 
 def monthly_timeline(selected,df):
-
     if selected != 'Overall':
         df = df[df['user'] == selected]
-
     monthly_timeline = df.groupby(['year','month_num','months']).count()['messages'].reset_index()
     time = []
     for i in range(monthly_timeline.shape[0]):
         time.append(monthly_timeline['months'][i] + "-" + str(monthly_timeline['year'][i]))
     monthly_timeline['time'] = time
     monthly_timeline = monthly_timeline[['messages','time']]
-
     return monthly_timeline
 
 def daily_timeline(selected,df):
@@ -264,16 +258,15 @@ def response_time_analysis(df):
     
     # Calculate average response time per user
     avg_response_time = df.groupby('user')['response_time'].mean().reset_index()
-    avg_response_time.columns = ['user', 'avg_response_time']
+    avg_response_time.columns = ['user', 'avg_response_time (in minutes)']
     
     return avg_response_time
 
-# improved verision of above detect spam
 def detect_spam_and_important(df, selected=None, spam_keywords=None, important_keywords=None, emoji_threshold=5, repetition_threshold=3):
     if spam_keywords is None:
         spam_keywords = [
             r'\bbuy\s+now\b', r'\bdiscount\b', r'\bfree\b', r'\bearn\s+money\b',
-            r'\burgent\b', r'\blimited\s+time\b', r'\bclick\s+here\b', 
+            r'\blimited\s+time\b', r'\bclick\s+here\b', 
             r'\bcongratulations\b', r'\bwon\b'
         ]
     
@@ -325,28 +318,46 @@ def detect_spam_and_important(df, selected=None, spam_keywords=None, important_k
 
     return spam_count, non_spam_count, spam_messages, important_count, important_messages
 
-#########################################################################################################################
-## Latest Features
-def chat_contri(filtered_df):
-    # Assuming filtered_df is already filtered before calling this function
-    # Analyze and calculate contributions
-    df_contri = filtered_df['user'].value_counts().reset_index()
-    df_contri.columns = ['user', 'messages_count']
+def chat_contri(filtered_df, top_n=10):
+    """
+    Generates a bar chart showing the top contributors in the chat.
+
+    Parameters:
+    - filtered_df: DataFrame containing chat data with a 'user' column.
+    - top_n: Number of top users to display (default is 10).
+
+    Returns:
+    - fig: Matplotlib figure object.
+    - df_contri: DataFrame with contribution data.
+    """
+
+    # Count messages per user
+    df_contri = filtered_df['user'].value_counts(normalize=True).mul(100).reset_index()
+    df_contri.columns = ['user', 'percent']
     
-    # Optionally return a chart (matplotlib or plotly)
-    # Example: Create a bar chart
-    import matplotlib.pyplot as plt
-    
-    fig, ax = plt.subplots()
-    ax.bar(df_contri['user'], df_contri['messages_count'])
-    ax.set_title('Message Contribution by User')
-    ax.set_xlabel('User')
-    ax.set_ylabel('Message Count')
-    plt.xticks(rotation=45)
+    # Select top contributors
+    df_top = df_contri.head(top_n)
+
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Use seaborn for better aesthetics
+    sns.barplot(x=df_top['user'], y=df_top['percent'], palette='viridis', ax=ax)
+
+    # Labels and formatting
+    ax.set_title('Top Chat Contributors', fontsize=14)
+    ax.set_xlabel('User', fontsize=12)
+    ax.set_ylabel('Contribution (%)', fontsize=12)
+    plt.xticks(rotation=30, ha="right", fontsize=10)  # Rotate for readability
+    plt.yticks(fontsize=10)
+
+    # Display percentage values on bars
+    for index, value in enumerate(df_top['percent']):
+        ax.text(index, value + 1, f"{value:.1f}%", ha='center', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()  # Adjust layout to prevent cutoff
 
     return fig, df_contri
-
-##customizable
 
 def filter_by_date(df, start_date, end_date):
     # Ensure start_date and end_date are converted to the correct type
@@ -415,3 +426,20 @@ def generate_pdf(df, analysis_data):
     os.remove(temp_file_path)
 
     return pdf_output
+
+def analyze_sentiment(message):
+    """
+    Analyzes the sentiment of a message.
+    Returns:
+        polarity (float): The sentiment polarity (-1 to 1).
+        sentiment (str): 'Positive', 'Negative', or 'Neutral'.
+    """
+    analysis = TextBlob(message)
+    polarity = analysis.sentiment.polarity
+    if polarity > 0:
+        sentiment = 'Positive'
+    elif polarity < 0:
+        sentiment = 'Negative'
+    else:
+        sentiment = 'Neutral'
+    return polarity, sentiment
