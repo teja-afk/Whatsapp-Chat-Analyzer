@@ -1,5 +1,5 @@
 
-# Whatsapp_chat_analyser
+# Whatsapp_chat_analzser
 
 
 The WhatsApp Chat Analyzer is a tool designed to extract valuable insights from exported chat files obtained from WhatsApp conversations. Leveraging this tool, users can gain a comprehensive understanding of their communication patterns, frequency of messages, and more, through a user-friendly interface.
@@ -17,7 +17,7 @@ Steps
 
 ```bash
   1) Clone the repository
-    https://github.com/teja-afk/Whatsapp-Chat-Analayser
+    https://github.com/teja-afk/Whatsapp-Chat-Analyzer
 
   2) Create a conda environment after opening the repository
     conda create -n venv python=3.11 -y
