@@ -17,7 +17,7 @@ Steps
 
 ```bash
   1) Clone the repository
-    https://github.com/Atharva1921/Whatsapp_chat_analyser.git 
+    https://github.com/teja-afk/Whatsapp-Chat-Analayser
 
   2) Create a conda environment after opening the repository
     conda create -n venv python=3.11 -y
