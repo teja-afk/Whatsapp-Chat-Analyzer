@@ -7,7 +7,7 @@ The WhatsApp Chat Analyzer is a tool designed to extract valuable insights from 
 ## Demo
 
 ```bash
-https://whatsapp-analyzer.streamlit.app/
+https://8s4rpnm5rko8hgp5oygknw.streamlit.app/
 ```
 
 
