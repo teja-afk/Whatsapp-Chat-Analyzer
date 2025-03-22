@@ -35,7 +35,3 @@ Steps
 
   6) Check the chat analysis report
 ```
-    
-## Video
-
-[![Watch the video]](https://youtu.be/QZ5Z78_rAsE)
