@@ -1,5 +1,5 @@
 
-# Whatsapp_chat_analzser
+# Whatsapp_chat_analyzer
 
 
 The WhatsApp Chat Analyzer is a tool designed to extract valuable insights from exported chat files obtained from WhatsApp conversations. Leveraging this tool, users can gain a comprehensive understanding of their communication patterns, frequency of messages, and more, through a user-friendly interface.
@@ -35,3 +35,4 @@ Steps
 
   6) Check the chat analysis report
 ```
+
